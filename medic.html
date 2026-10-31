@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Путь медика</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: linear-gradient(160deg, #0a1628 0%, #132b4a 100%);
+    color: #e8f0f8;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 20px;
+  }
+  #app {
+    max-width: 820px;
+    width: 100%;
+    background: rgba(18, 38, 64, 0.9);
+    border-radius: 24px;
+    padding: 28px 32px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    border: 1px solid #2a4a72;
+  }
+  h1 { font-size: 1.8rem; margin-bottom: 4px; color: #7dd3fc; }
+  .subtitle { color: #94a3b8; font-size: 0.95rem; margin-bottom: 24px; }
+  .hidden { display: none !important; }
+
+  /* ---- Медицинские анимации ---- */
+  .med-icons { display: flex; gap: 18px; justify-content: center; margin: 16px 0 22px; flex-wrap: wrap; }
+  .med-icon {
+    width: 64px; height: 64px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2rem;
+    background: rgba(125, 211, 252, 0.08);
+    border: 2px solid #2a4a72;
+    border-radius: 18px;
+    animation: float 2.6s ease-in-out infinite;
+  }
+  .med-icon:nth-child(2) { animation-delay: 0.4s; }
+  .med-icon:nth-child(3) { animation-delay: 0.8s; }
+  .med-icon:nth-child(4) { animation-delay: 1.2s; }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+  .heartbeat { animation: beat 1.2s ease-in-out infinite; }
+  @keyframes beat {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.12); }
+  }
+
+  /* ---- Выбор персонажа ---- */
+  .char-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 20px 0; }
+  .char-card {
+    background: rgba(125, 211, 252, 0.06);
+    border: 2px solid #2a4a72;
+    border-radius: 18px;
+    padding: 18px 12px;
+    text-align: center;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+  .char-card:hover { border-color: #7dd3fc; transform: translateY(-3px); }
+  .char-card.selected { border-color: #38bdf8; background: rgba(56, 189, 248, 0.15); box-shadow: 0 0 20px rgba(56,189,248,0.25); }
+  .char-emoji { font-size: 2.6rem; display: block; margin-bottom: 8px; }
+  .char-name { font-weight: 600; font-size: 1rem; }
+  .char-desc { font-size: 0.78rem; color: #94a3b8; margin-top: 4px; }
+
+  input[type="text"] {
+    width: 100%;
+    padding: 14px 18px;
+    border-radius: 14px;
+    border: 2px solid #2a4a72;
+    background: #0f223a;
+    color: #e8f0f8;
+    font-size: 1rem;
+    margin: 10px 0 18px;
+    outline: none;
+  }
+  input[type="text"]:focus { border-color: #38bdf8; }
+
+  button {
+    background: linear-gradient(135deg, #0ea5e9, #2563eb);
+    color: #fff;
+    border: none;
+    padding: 14px 28px;
+    border-radius: 14px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
+    width: 100%;
+  }
+  button:hover { opacity: 0.9; transform: translateY(-1px); }
+  button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  /* ---- Сюжетный экран ---- */
+  .scene-title { font-size: 1.4rem; color: #7dd3fc; margin-bottom: 12px; }
+  .scene-text { line-height: 1.7; color: #cbd5e1; margin-bottom: 20px; font-size: 1rem; }
+  .choices { display: flex; flex-direction: column; gap: 12px; }
+  .choice-btn {
+    background: rgba(125, 211, 252, 0.08);
+    border: 2px solid #2a4a72;
+    color: #e8f0f8;
+    text-align: left;
+    padding: 14px 20px;
+    border-radius: 14px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    transition: 0.2s;
+    width: 100%;
+  }
+  .choice-btn:hover { border-color: #38bdf8; background: rgba(56, 189, 248, 0.15); }
+
+  /* ---- Статус-бар ---- */
+  .status-bar {
+    display: flex; justify-content: space-between; align-items: center;
+    background: rgba(15, 34, 58, 0.9);
+    border: 1px solid #2a4a72;
+    border-radius: 14px;
+    padding: 10px 18px;
+    margin-bottom: 20px;
+    font-size: 0.9rem;
+    flex-wrap: wrap; gap: 10px;
+  }
+  .status-item { display: flex; align-items: center; gap: 6px; }
+  .status-value { color: #7dd3fc; font-weight: 700; }
+  .achievements { color: #fbbf24; }
+
+  /* ---- Достижения ---- */
+  .ach-list { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+  .ach-badge {
+    background: rgba(251, 191, 36, 0.15);
+    border: 1px solid #fbbf24;
+    color: #fbbf24;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.78rem;
+  }
+
+  /* ---- Финал ---- */
+  .final-score { font-size: 3rem; font-weight: 800; color: #7dd3fc; text-align: center; margin: 20px 0; }
+  .final-label { text-align: center; color: #94a3b8; margin-bottom: 24px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <h1>🩺 Путь медика</h1>
+  <div class="subtitle">От первокурсника до специалиста</div>
+
+  <!-- Анимированные медицинские иконки -->
+  <div class="med-icons" id="medIcons">
+    <div class="med-icon heartbeat">🫀</div>
+    <div class="med-icon">💉</div>
+    <div class="med-icon">🩺</div>
+    <div class="med-icon">🧬</div>
+  </div>
+
+  <!-- ===== ЭКРАН 1: Выбор персонажа ===== -->
+  <div id="screenSelect">
+    <div class="scene-title">Выбери своего персонажа</div>
+    <div class="char-grid" id="charGrid"></div>
+    <div style="margin-top:6px; font-size:0.9rem; color:#94a3b8;">Имя персонажа</div>
+    <input type="text" id="playerName" placeholder="Например: Алиса" maxlength="20" value="Алекс">
+    <button id="startBtn" disabled>Начать обучение</button>
+  </div>
+
+  <!-- ===== ЭКРАН 2: Сюжет ===== -->
+  <div id="screenGame" class="hidden">
+    <div class="status-bar">
+      <div class="status-item">👤 <span id="displayName">—</span></div>
+      <div class="status-item">📅 <span id="displayYear" class="status-value">1</span> курс</div>
+      <div class="status-item">⭐ <span id="displayScore" class="status-value">0</span> очков</div>
+      <div class="status-item achievements" id="displayAch"></div>
+    </div>
+    <div class="scene-title" id="sceneTitle"></div>
+    <div class="scene-text" id="sceneText"></div>
+    <div class="choices" id="choices"></div>
+  </div>
+
+  <!-- ===== ЭКРАН 3: Финал ===== -->
+  <div id="screenEnd" class="hidden">
+    <div class="scene-title" style="text-align:center;">🎓 Ты дошёл до конца пути</div>
+    <div class="final-score" id="finalScore">0</div>
+    <div class="final-label">итоговых очков</div>
+    <div id="finalText" class="scene-text" style="text-align:center;"></div>
+    <div class="ach-list" id="finalAch" style="justify-content:center;"></div>
+    <button onclick="restartGame()" style="margin-top:24px;">Пройти заново</button>
+  </div>
+</div>
+
+<script>
+/* ================== ДАННЫЕ ================== */
+const characters = [
+  { id: 'surgeon', emoji: '🔪', name: 'Хирург', desc: 'Точность и решительность', bonus: 'Хирургия' },
+  { id: 'therapist', emoji: '🩺', name: 'Терапевт', desc: 'Внимательность и логика', bonus: 'Диагностика' },
+  { id: 'pediatrician', emoji: '🧸', name: 'Педиатр', desc: 'Терпение и эмпатия', bonus: 'Общение' }
+];
+
+let selectedChar = null;
+let player = {
+  name: 'Алекс',
+  charId: null,
+  year: 1,
+  score: 0,
+  achievements: [],
+  specialization: null
+};
+
+/* ================== СЮЖЕТНЫЕ СЦЕНЫ ================== */
+const scenes = {
+  /* --- Курс 1 --- */
+  year1: {
+    title: '1 курс — Анатомия',
+    text: 'Первый семестр. Ты сидишь на лекции по анатомии, перед тобой — атлас человека. Преподаватель спрашивает: «С чего начнём изучение тела?»',
+    choices: [
+      { text: '🦴 С костной системы — фундамент', next: 'year1_skel', score: 15, ach: 'Первый шаг' },
+      { text: '🫀 С сердечно-сосудистой системы — самое важное', next: 'year1_heart', score: 10 },
+      { text: '🧠 С нервной системы — всё начинается с мозга', next: 'year1_brain', score: 12 }
+    ]
+  },
+  year1_skel: {
+    title: '1 курс — Кости',
+    text: 'Ты выбираешь остеологию. Запоминаешь названия костей, учишься определять их на рентгене. К концу семестра ты уже уверенно ориентируешься в скелете.',
+    choices: [{ text: 'Продолжить →', next: 'year2', score: 5 }]
+  },
+  year1_heart: {
+    title: '1 курс — Сердце',
+    text: 'Ты погружаешься в кардиологию. Изучаешь строение сердца, клапаны, круги кровообращения. Это сложно, но увлекательно.',
+    choices: [{ text: 'Продолжить →', next: 'year2', score: 5 }]
+  },
+  year1_brain: {
+    title: '1 курс — Мозг',
+    text: 'Неврология захватывает тебя. Нейроны, синапсы, отделы мозга — ты понимаешь, что это целая вселенная.',
+    choices: [{ text: 'Продолжить →', next: 'year2', score: 5 }]
+  },
+
+  /* --- Курс 2 --- */
+  year2: {
+    title: '2 курс — Физиология',
+    text: 'Теперь ты изучаешь, как работают системы органов. На практикуме ставишь эксперимент на лягушке. Что будешь делать?',
+    choices: [
+      { text: '🔬 Тщательно подготовиться и провести опыт чисто', next: 'year2_lab', score: 18, ach: 'Аккуратист' },
+      { text: '🧪 Импровизировать — наука любит смелых', next: 'year2_improv', score: 8 },
+      { text: '📖 Сначала перечитать методичку', next: 'year2_read', score: 12 }
+    ]
+  },
+  year2_lab: {
+    title: '2 курс — Практикум',
+    text: 'Твой эксперимент проходит идеально. Преподаватель хвалит тебя перед группой. Ты чувствуешь, что выбрал правильный путь.',
+    choices: [{ text: 'Продолжить →', next: 'year3', score: 5 }]
+  },
+  year2_improv: {
+    title: '2 курс — Импровизация',
+    text: 'Опыт идёт не по плану, но ты выкручиваешься. Результат неидеальный, зато ты понял, как работает система.',
+    choices: [{ text: 'Продолжить →', next: 'year3', score: 5 }]
+  },
+  year2_read: {
+    title: '2 курс — Теория',
+    text: 'Ты перечитываешь методичку и находишь ошибку в прошлогоднем протоколе. Мелочь, но приятно.',
+    choices: [{ text: 'Продолжить →', next: 'year3', score: 5 }]
+  },
+
+  /* --- Курс 3 --- */
+  year3: {
+    title: '3 курс — Патологическая анатомия',
+    text: 'Первый серьёзный курс по болезням. Ты изучаешь, как патологии меняют органы. Впереди — зачёт.',
+    choices: [
+      { text: '📝 Готовиться по конспектам и атласу', next: 'year3_study', score: 20, ach: 'Знаток' },
+      { text: '👥 Собрать группу и разобрать сложные темы вместе', next: 'year3_group', score: 15 },
+      { text: '🎧 Слушать лекции в записи и учить самостоятельно', next: 'year3_solo', score: 12 }
+    ]
+  },
+  year3_study: {
+    title: '3 курс — Зачёт',
+    text: 'Ты сдаёшь патологию на отлично. Преподаватель отмечает глубину понимания.',
+    choices: [{ text: 'Продолжить →', next: 'year4', score: 5 }]
+  },
+  year3_group: {
+    title: '3 курс — Вместе',
+    text: 'Групповая подготовка помогает — вы объясняете друг другу сложные темы. Зачёт сдан.',
+    choices: [{ text: 'Продолжить →', next: 'year4', score: 5 }]
+  },
+  year3_solo: {
+    title: '3 курс — Самостоятельно',
+    text: 'Ты справляешься сам, но чувствуешь, что иногда не хватает обсуждения. Зачёт сдан.',
+    choices: [{ text: 'Продолжить →', next: 'year4', score: 5 }]
+  },
+
+  /* --- Курс 4 --- */
+  year4: {
+    title: '4 курс — Фармакология',
+    text: 'Лекарства, дозы, побочные эффекты. Преподаватель даёт задачу: пациенту нужно подобрать препарат. Твой подход?',
+    choices: [
+      { text: '💊 Начать с минимальной дозы и наблюдать', next: 'year4_min', score: 16, ach: 'Осторожность' },
+      { text: '📊 Рассчитать по формуле и назначить стандарт', next: 'year4_std', score: 14 },
+      { text: '🧠 Спросить у опытного коллеги', next: 'year4_ask', score: 10 }
+    ]
+  },
+  year4_min: {
+    title: '4 курс — Осторожно',
+    text: 'Пациент хорошо переносит препарат. Ты учишься думать о безопасности.',
+    choices: [{ text: 'Продолжить →', next: 'year5', score: 5 }]
+  },
+  year4_std: {
+    title: '4 курс — Расчёт',
+    text: 'Стандартная схема срабатывает. Ты понимаешь, что формулы — не просто символы, а инструменты.',
+    choices: [{ text: 'Продолжить →', next: 'year5', score: 5 }]
+  },
+  year4_ask: {
+    title: '4 курс — Совет',
+    text: 'Коллега подсказывает нестандартное решение. Ты записываешь его в блокнот.',
+    choices: [{ text: 'Продолжить →', next: 'year5', score: 5 }]
+  },
+
+  /* --- Курс 5 --- */
+  year5: {
+    title: '5 курс — Клиническая практика',
+    text: 'Ты впервые работаешь с реальными пациентами под наблюдением. Первый пациент жалуется на боль в груди. Твои действия?',
+    choices: [
+      { text: '🩺 Собрать анамнез и провести осмотр', next: 'year5_exam', score: 22, ach: 'Диагност' },
+      { text: '📋 Сразу отправить на ЭКГ', next: 'year5_ecg', score: 18 },
+      { text: '💬 Успокоить и расспросить о симптомах', next: 'year5_talk', score: 14 }
+    ]
+  },
+  year5_exam: {
+    title: '5 курс — Осмотр',
+    text: 'Ты выявляешь признаки стенокардии и вовремя направляешь пациента к кардиологу. Наставник кивает.',
+    choices: [{ text: 'Продолжить →', next: 'year6', score: 5 }]
+  },
+  year5_ecg: {
+    title: '5 курс — ЭКГ',
+    text: 'ЭКГ показывает изменения. Ты правильно интерпретируешь результат и получаешь благодарность.',
+    choices: [{ text: 'Продолжить →', next: 'year6', score: 5 }]
+  },
+  year5_talk: {
+    title: '5 курс — Разговор',
+    text: 'Пациент успокаивается и рассказывает важную деталь, которую ты бы иначе пропустил.',
+    choices: [{ text: 'Продолжить →', next: 'year6', score: 5 }]
+  },
+
+  /* --- Курс 6: выбор специализации --- */
+  year6: {
+    title: '6 курс — Выпуск',
+    text: 'Шесть лет позади. Ты стоишь перед выбором узкой специализации. Это определит твой дальнейший путь.',
+    choices: [
+      { text: '🔪 Хирургия — точность и решительность', next: 'end_surgeon', score: 30, spec: 'Хирургия', ach: 'Скальпель' },
+      { text: '🩺 Терапия — диагностика и лечение', next: 'end_therapist', score: 30, spec: 'Терапия', ach: 'Диагност-эксперт' },
+      { text: '🧸 Педиатрия — дети и их здоровье', next: 'end_pediatrician', score: 30, spec: 'Педиатрия', ach: 'Детский доктор' },
+      { text: '🧠 Неврология — мозг и нервная система', next: 'end_neuro', score: 32, spec: 'Неврология', ach: 'Нейро' },
+      { text: '🫀 Кардиология — сердце', next: 'end_cardio', score: 32, spec: 'Кардиология', ach: 'Сердцевед' },
+      { text: '🔬 Патология — наука о болезнях', next: 'end_patho', score: 28, spec: 'Патология', ach: 'Исследователь' }
+    ]
+  },
+
+  /* --- Финалы --- */
+  end_surgeon: { title: 'Финал: Хирургия', text: 'Ты становишься хирургом. Твои руки спасают жизни, а точность доведена до автоматизма. Путь был долгим, но ты на месте.', choices: [] },
+  end_therapist: { title: 'Финал: Терапия', text: 'Ты — терапевт. К тебе приходят с самыми разными жалобами, и ты находишь причину там, где другие видят хаос. Диагностика — твой дар.', choices: [] },
+  end_pediatrician: { title: 'Финал: Педиатрия', text: 'Ты работаешь с детьми. Каждый день — это улыбки, слёзы и благодарность родителей. Ты выбрал путь, где важны и знания, и сердце.', choices: [] },
+  end_neuro: { title: 'Финал: Неврология', text: 'Мозг остаётся самой большой загадкой, и ты — один из тех, кто её разгадывает. Твоя специализация — неврология.', choices: [] },
+  end_cardio: { title: 'Финал: Кардиология', text: 'Сердце — главный мотор организма, и ты знаешь о нём всё. Кардиология стала твоим призванием.', choices: [] },
+  end_patho: { title: 'Финал: Патология', text: 'Ты не лечишь пациентов напрямую, но без твоих заключений лечение было бы слепым. Патология — наука, которая двигает медицину вперёд.', choices: [] }
+};
+
+/* ================== ЛОГИКА ================== */
+let currentScene = 'year1';
+
+function renderCharacters() {
+  const grid = document.getElementById('charGrid');
+  grid.innerHTML = '';
+  characters.forEach(c => {
+    const div = document.createElement('div');
+    div.className = 'char-card' + (selectedChar === c.id ? ' selected' : '');
+    div.innerHTML = `<span class="char-emoji">${c.emoji}</span><div class="char-name">${c.name}</div><div class="char-desc">${c.desc}</div>`;
+    div.onclick = () => {
+      selectedChar = c.id;
+      document.querySelectorAll('.char-card').forEach(el => el.classList.remove('selected'));
+      div.classList.add('selected');
+      document.getElementById('startBtn').disabled = false;
+    };
+    grid.appendChild(div);
+  });
+}
+
+document.getElementById('startBtn').onclick = () => {
+  const nameInput = document.getElementById('playerName').value.trim();
+  if (!nameInput || !selectedChar) return;
+  player.name = nameInput;
+  player.charId = selectedChar;
+
+  document.getElementById('screenSelect').classList.add('hidden');
+  document.getElementById('screenGame').classList.remove('hidden');
+  document.getElementById('displayName').textContent = player.name;
+  currentScene = 'year1';
+  showScene('year1');
+};
+
+function showScene(key) {
+  const scene = scenes[key];
+  if (!scene) return;
+
+  /* Обновляем курс по ключу сцены */
+  if (key.startsWith('year')) {
+    const yearMatch = key.match(/year(\d)/);
+    if (yearMatch) player.year = parseInt(yearMatch[1]);
+  }
+
+  document.getElementById('sceneTitle').textContent = scene.title;
+  document.getElementById('sceneText').textContent = scene.text;
+  document.getElementById('displayYear').textContent = player.year;
+
+  const choicesDiv = document.getElementById('choices');
+  choicesDiv.innerHTML = '';
+
+  if (scene.choices.length === 0) {
+    endGame(scene);
+    return;
+  }
+
+  scene.choices.forEach(ch => {
+    const btn = document.createElement('button');
+    btn.className = 'choice-btn';
+    btn.textContent = ch.text;
+    btn.onclick = () => {
+      if (ch.score) player.score += ch.score;
+      if (ch.ach && !player.achievements.includes(ch.ach)) {
+        player.achievements.push(ch.ach);
+      }
+      if (ch.spec) player.specialization = ch.spec;
+
+      document.getElementById('displayScore').textContent = player.score;
+      renderAchievements();
+
+      if (ch.next) {
+        currentScene = ch.next;
+        showScene(ch.next);
+      }
+    };
+    choicesDiv.appendChild(btn);
+  });
+}
+
+function renderAchievements() {
+  const el = document.getElementById('displayAch');
+  el.innerHTML = player.achievements.map(a => `<span class="ach-badge">🏅 ${a}</span>`).join(' ');
+}
+
+function endGame(scene) {
+  document.getElementById('screenGame').classList.add('hidden');
+  document.getElementById('screenEnd').classList.remove('hidden');
+  document.getElementById('finalScore').textContent = player.score;
+  document.getElementById('finalText').textContent =
+    scene.text + (player.specialization ? ` Твоя специализация: ${player.specialization}.` : '');
+  document.getElementById('finalAch').innerHTML =
+    player.achievements.map(a => `<span class="ach-badge">🏅 ${a}</span>`).join(' ');
+}
+
+function restartGame() {
+  /* Сброс состояния игрока */
+  player = {
+    name: 'Алекс',
+    charId: null,
+    year: 1,
+    score: 0,
+    achievements: [],
+    specialization: null
+  };
+  selectedChar = null;
+  currentScene = 'year1';
+
+  /* Сброс интерфейса */
+  document.getElementById('finalScore').textContent = '0';
+  document.getElementById('finalText').textContent = '';
+  document.getElementById('finalAch').innerHTML = '';
+  document.getElementById('displayScore').textContent = '0';
+  document.getElementById('displayAch').innerHTML = '';
+  document.getElementById('displayYear').textContent = '1';
+  document.getElementById('displayName').textContent = '—';
+  document.getElementById('playerName').value = 'Алекс';
+  document.getElementById('startBtn').disabled = true;
+
+  /* Перерисовать карточки персонажей без выделения */
+  renderCharacters();
+
+  /* Показать стартовый экран */
+  document.getElementById('screenEnd').classList.add('hidden');
+  document.getElementById('screenGame').classList.add('hidden');
+  document.getElementById('screenSelect').classList.remove('hidden');
+}
+
+/* ================== СТАРТ ================== */
+renderCharacters();
+</script>
+</body>
+</html>
